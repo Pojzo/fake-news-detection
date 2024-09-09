@@ -8,7 +8,7 @@ data_path = "../data"
 fake_news_path = ospath.join(data_path, "Fake.csv")
 real_news_path = ospath.join(data_path, "True.csv")
 
-dataloader = DataLoader(real_news_path, fake_news_path, nrows=500)
+dataloader = DataLoader(real_news_path, fake_news_path, nrows=10000)
 dataloader.init_data(['text'])
 dataloader.preprocess_data()
 
@@ -24,12 +24,26 @@ model.add(Dense(1, activation='sigmoid'))
 
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
+from tensorflow.keras.callbacks import EarlyStopping
+
+# Create an EarlyStopping callback
+early_stopping = EarlyStopping(
+    monitor='val_accuracy',  # Monitor validation accuracy
+    patience=5,              # Number of epochs with no improvement after which training will be stopped
+    verbose=1,               # Verbosity mode
+    mode='max',              # Mode for the monitored quantity
+    baseline=0.995,          # Baseline value for the monitored quantity to reach
+    restore_best_weights=True # Restore model weights from the epoch with the best value of the monitored quantity
+)
+
+# Train the model with validation data and EarlyStopping callback
 model.fit(
     np.array(features_train), 
     np.array(labels_train), 
-    epochs=1, 
+    epochs=10, 
     batch_size=32, 
-    validation_data=(np.array(features_val), np.array(labels_val))
+    validation_data=(np.array(features_val), np.array(labels_val)),
+    callbacks=[early_stopping]  # Pass the EarlyStopping callback here
 )
 
 test_loss, test_accuracy = model.evaluate(np.array(features_test), np.array(labels_test))
