@@ -27,18 +27,21 @@ class DataLoader:
     def get_vocab_size(self):
         return len(self.all_tokens)
     
-    def _remove_stop_words(self, words: list[str]) -> str:
+    @staticmethod
+    def _remove_stop_words(words: list[str], stopwords: set[str]) -> str:
         result = []
         for word in words:
-            if word not in self.stopwords:
+            if word not in stopwords:
                 result.append(word)
         
         return " ".join(result)
     
-    def _to_lower(self, words: list[str]) -> list[str]:
+    @staticmethod
+    def _to_lower(words: list[str]) -> list[str]:
         return [word.lower() for word in words]
     
-    def _pad_sequence(self, sequence, max_length):
+    @staticmethod
+    def _pad_sequence(sequence, max_length):
         return np.pad(sequence, (0, max_length - len(sequence)), 'constant')
 
     def _tokenize(self):
@@ -68,17 +71,18 @@ class DataLoader:
     
         max_len *= 2
         for i in range(len(self.features)):
-            self.features[i] = self._pad_sequence(self.features[i], max_len)
+            self.features[i] = DataLoader._pad_sequence(self.features[i], max_len)
 
         self.max_len = max_len
         self.flattened_features = np.array(self.features)
     
-    def tokenize_with_existing_tokenizer(self, features: str):
+    @staticmethod
+    def tokenize_with_existing_tokenizer(features: str, tokenizer: Tokenizer, max_len: int, stopwords):
         split_features = re.split(r'\s+', features)
-        lower = self._to_lower(split_features)
-        without_stop_words = self._remove_stop_words(lower)
+        lower = DataLoader._to_lower(split_features)
+        without_stop_words = DataLoader._remove_stop_words(lower, stopwords)
         tokenized_1 = word_tokenize(without_stop_words)
-        tokenized_row = self.tokenizer.texts_to_sequences(tokenized_1)
+        tokenized_row = tokenizer.texts_to_sequences(tokenized_1)
         result = []
         for token in tokenized_row:
             if isinstance(token, list):
@@ -86,13 +90,13 @@ class DataLoader:
             else:
                 result.append(token)
     
-        return self._pad_sequence(result, self.max_len)
+        return DataLoader._pad_sequence(result, max_len)
 
     
     def preprocess_data(self):
         for i in range(len(self.features_raw)):
-            self.features_raw[i] = self._to_lower(self.features_raw[i])
-            self.features_raw[i] = self._remove_stop_words(self.features_raw[i])
+            self.features_raw[i] = DataLoader._to_lower(self.features_raw[i])
+            self.features_raw[i] = DataLoader._remove_stop_words(self.features_raw[i], self.stopwords)
         
         self._tokenize()
     
